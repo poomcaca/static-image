@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Static Noise Generator</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.js"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+
+  <!-- Header -->
+  <header class="bg-gray-800 p-4">
+    <div class="container mx-auto flex justify-between items-center">
+      <h1 class="text-2xl font-bold">Static Noise Generator</h1>
+      <nav>
+        <a href="#features" class="text-gray-300 hover:text-white mx-2">Features</a>
+        <a href="#pricing" class="text-gray-300 hover:text-white mx-2">Pricing</a>
+        <a href="#contact" class="text-gray-300 hover:text-white mx-2">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero bg-gray-700 py-20 text-center">
+    <h2 class="text-4xl font-bold mb-4">Generate and Download White Noise Images</h2>
+    <p class="text-lg mb-8">Create static noise images for free and download them instantly.</p>
+  </section>
+
+  <!-- Controls Section -->
+  <section class="py-10">
+    <div class="container mx-auto text-center">
+      <div class="mb-4">
+        <label class="mr-2">Width: <input type="number" id="canvasWidth" value="300" min="50" max="1000" class="text-black px-2"></label>
+        <label class="ml-4">Height: <input type="number" id="canvasHeight" value="300" min="50" max="1000" class="text-black px-2"></label>
+        <button onclick="resizeCanvas()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded ml-4">Set Size</button>
+      </div>
+      <div class="mb-4">
+        <label for="noiseType">Select Noise Type:</label>
+        <select id="noiseType" class="text-black px-2">
+          <option value="white">White Noise (B/W)</option>
+          <option value="color">Color Noise (RGB)</option>
+          <option value="tv">TV Interference</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label><input type="checkbox" id="animateToggle" onchange="toggleAnimation()" class="mr-2"> Animate Noise</label>
+      </div>
+      <div class="mb-4">
+        <button onclick="generateNoise()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded mr-2">Generate</button>
+        <button onclick="downloadImage()" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded mr-2">Download PNG</button>
+        <button onclick="recordGIF()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded">Export as GIF</button>
+      </div>
+      <canvas id="noiseCanvas" width="300" height="300" class="mx-auto border border-gray-500"></canvas>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 py-4">
+    <div class="container mx-auto text-center">
+      <p>&copy; 2023 JUNHAO WENG. Contact: <a href="mailto:poomcaca820@gmail.com" class="text-blue-400">poomcaca820@gmail.com</a></p>
+    </div>
+  </footer>
+
+  <script>
+    const canvas = document.getElementById("noiseCanvas");
+    const ctx = canvas.getContext("2d");
+    let animationInterval = null;
+
+    function resizeCanvas() {
+      const w = parseInt(document.getElementById("canvasWidth").value);
+      const h = parseInt(document.getElementById("canvasHeight").value);
+      canvas.width = w;
+      canvas.height = h;
+      generateNoise();
+    }
+
+    function toggleAnimation() {
+      const animate = document.getElementById("animateToggle").checked;
+      if (animate) {
+        animationInterval = setInterval(generateNoise, 100);
+      } else {
+        clearInterval(animationInterval);
+      }
+    }
+
+    function generateNoise() {
+      const imageData = ctx.createImageData(canvas.width, canvas.height);
+      const type = document.getElementById("noiseType").value;
+
+      for (let y = 0; y < canvas.height; y++) {
+        let bandOffset = type === "tv" ? Math.random() * 50 - 25 : 0;
+
+        for (let x = 0; x < canvas.width; x++) {
+          const index = (y * canvas.width + x) * 4;
+          let r, g, b;
+
+          if (type === "white") {
+            const gray = Math.random() * 255;
+            r = g = b = gray;
+          } else if (type === "color") {
+            r = Math.random() * 255;
+            g = Math.random() * 255;
+            b = Math.random() * 255;
+          } else if (type === "tv") {
+            const stripe = Math.sin((y + bandOffset) / 4) * 50 + 128 + Math.random() * 30;
+            r = g = b = stripe;
+          }
+
+          imageData.data[index] = r;
+          imageData.data[index + 1] = g;
+          imageData.data[index + 2] = b;
+          imageData.data[index + 3] = 255;
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function downloadImage() {
+      const link = document.createElement('a');
+      link.download = 'static_noise.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+
+    function recordGIF() {
+      const gif = new GIF({
+        workers: 2,
+        quality: 10,
+        width: canvas.width,
+        height: canvas.height,
+        workerScript: 'https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.worker.js'
+      });
+
+      const frameCount = 30;
+      let i = 0;
+
+      function addNextFrame() {
+        if (i >= frameCount) {
+          gif.render();
+          return;
+        }
+
+        generateNoise();
+        gif.addFrame(ctx, { copy: true, delay: 100 });
+        i++;
+        setTimeout(addNextFrame, 50);
+      }
+
+      gif.on('finished', function(blob) {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'animated_noise.gif';
+        link.click();
+      });
+
+      addNextFrame();
+    }
+
+    generateNoise();
+  </script>
+
+</body>
+</html>
